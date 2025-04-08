@@ -1,11 +1,14 @@
 ﻿using System.Net;
+using Domain;
 using Domain.DTOs;
+using Domain.DTOs.ActivitySummaryDto;
 using Domain.DTOs.Users;
 using Domain.Entities;
 using Domain.Responses;
 using Infrastructure.Data;
 using Infrastructure.Interfaces;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Query.Internal;
 
 namespace Infrastructure.Services;
 
@@ -122,7 +125,204 @@ public class UserService(DataContext context) : IUserService
             CreatedAt = up.CreatedAt,
             UserName = up.User.UserName,
         }).ToListAsync();
-        
+
         return new Response<List<UserPostsDto>>(posts);
+    }
+
+    // Task 1
+    public async Task<Response<List<NewRegistrationDto>>> GetNewRegistrationAsync()
+    {
+        var now = DateTime.Now;
+
+        var users = await context.Users
+            .Where(u => now.AddDays(-14) <= u.JoinDate).ToListAsync();
+
+        var data = users.Select(u => new NewRegistrationDto()
+        {
+            UserName = u.UserName,
+            Email = u.Email,
+            JoinDate = u.JoinDate,
+        }).ToList();
+        return new Response<List<NewRegistrationDto>>(data);
+    }
+
+    // 2
+    public async Task<Response<List<ActivePosterDto>>> GetActivePoster()
+    {
+        var users = await context.Users.Include(n => n.Posts)
+            .Where(u => u.Posts.Any())
+            .ToListAsync();
+
+        var usersDto = users.Select(u => new ActivePosterDto()
+        {
+            UserName = u.UserName,
+            PostCount = u.Posts.Count,
+        }).ToList();
+
+        return new Response<List<ActivePosterDto>>(usersDto.ToList());
+    }
+
+    // 3
+    public async Task<Response<List<RecentlyActiveUserDto>>> GetRecentlyActiveUsers()
+    {
+        var usersDto = await context.Posts
+            .Where(p => p.CreatedAt.AddDays(7) >= DateTime.Now)
+            .GroupBy(p => p.User)
+            .Select(g => new RecentlyActiveUserDto
+            {
+                UserName = g.Key.UserName,
+                PostCount = g.Count(),
+                LastPostDate = g.Max(p => p.CreatedAt)
+            })
+            .ToListAsync();
+
+        return new Response<List<RecentlyActiveUserDto>>(usersDto);
+    }
+
+    // 4
+    public async Task<Response<List<TopCreatorDto>>> GetTopCreators()
+    {
+        var users = await context.Users
+            .Include(n => n.Posts)
+            .OrderByDescending(u => u.Posts.Count)
+            .Take(5)
+            .Select(u => new TopCreatorDto()
+            {
+                UserName = u.UserName,
+                PostCount = u.Posts.Count,
+            }).ToListAsync();
+        return new Response<List<TopCreatorDto>>(users);
+    }
+
+    // 5
+    public async Task<Response<List<HighInteractionUserDto>>> GetHighInteractionUsers()
+    {
+        var users = await context.Users
+            .Include(u => u.Posts)
+            .ThenInclude(n => n.Comments)
+            .Where(n => n.Posts.Any())
+            .Select(n => new HighInteractionUserDto()
+            {
+                UserName = n.UserName,
+                PostCount = n.Posts.Count,
+                AvgCommentPerPost = n.Posts.Average(p => p.Comments.Count),
+            })
+            .Where(n => n.AvgCommentPerPost > 5)
+            .ToListAsync();
+
+        return new Response<List<HighInteractionUserDto>>(users);
+    }
+
+    // 6
+    public async Task<Response<List<LatestPostDto>>> GetLatestPosts()
+    {
+        var users = await context.Posts
+            .OrderByDescending(n => n.CreatedAt)
+            .Take(5)
+            .Select(n => new LatestPostDto()
+            {
+                Content = n.Content,
+                CreatedAt = n.CreatedAt,
+                UserName = n.User.UserName,
+            }).ToListAsync();
+
+        return new Response<List<LatestPostDto>>(users);
+    }
+
+    // 7
+    public async Task<Response<List<UserRecentPostDto>>> GetUserRecentPosts(int userId)
+    {
+        var posts = await context.Posts
+            .Where(n => n.UserId == userId)
+            .OrderByDescending(n => n.CreatedAt)
+            .Take(5)
+            .Select(n => new UserRecentPostDto()
+            {
+                Content = n.Content,
+                CreatedAt = n.CreatedAt,
+                UserName = n.User.UserName,
+            }).ToListAsync();
+        return new Response<List<UserRecentPostDto>>(posts);
+    }
+    
+    // 8
+    public async Task<Response<List<HighCommentPostDto>>> GetHighCommentPosts()
+    {
+        var posts = await context.Posts
+            .Where(n => n.Comments.Count > 10)
+            .Select(n => new HighCommentPostDto()
+            {
+                Content = n.Content,
+                CommentCount = n.Comments.Count,
+                UserName = n.User.UserName,
+            }).ToListAsync();
+        return new Response<List<HighCommentPostDto>>(posts);
+    }
+    
+    // 9
+    public async Task<Response<List<RecentCommentDto>>> GetRecentComments()
+    {
+        var comments = await context.Comments
+            .OrderByDescending(n => n.CreatedAt)
+            .Take(5)
+            .Select(n => new RecentCommentDto()
+            {
+                CreatedAt = n.CreatedAt,
+                Text = n.Text,
+                UserName = n.User.UserName,
+            }).ToListAsync();
+        return new Response<List<RecentCommentDto>>(comments);
+    }
+    
+    // 10
+    public async Task<Response<List<PostRecentCommentsDto>>> GetPostRecentComments(int id)
+    {
+        var comments = await context.Comments
+            .OrderByDescending(n => n.CreatedAt)
+            .Where(p => p.Post.Id == id)
+            .Take(5)
+            .Select(n => new PostRecentCommentsDto
+            {
+                CreatedAt = n.CreatedAt,
+                Text = n.Text,
+                UserName = n.User.UserName,
+            }).ToListAsync();
+        return new Response<List<PostRecentCommentsDto>>(comments);
+    }
+    
+    // 11
+    public async Task<Response<List<LongTextCommentDto>>> GetLongTextComments()
+    {
+        var comments = await context.Comments
+            .Where(n => n.Text.Length >= 200)
+            .Select(n => new LongTextCommentDto()
+            {
+                Text = n.Text,
+                TextLength = n.Text.Length,
+                UserName = n.User.UserName,
+            }).ToListAsync();
+        return new Response<List<LongTextCommentDto>>(comments);
+    }
+    
+    // 12
+    public async Task<Response<List<QuickResponseCommentDto>>> GetQuickResponseComments()
+    {
+        var comments = await context.Comments
+            .Where(n => n.CreatedAt <= n.Post.CreatedAt.AddMinutes(15))
+            .Select(n => new QuickResponseCommentDto()
+            {
+                Text = n.Text,
+                PostId = n.Post.Id,
+                UserName = n.User.UserName,
+                TimeDifferent = n.CreatedAt - n.Post.CreatedAt
+            }).ToListAsync();
+        
+        return new Response<List<QuickResponseCommentDto>>(comments);
+    }
+    
+    // 13
+    public async Task<Response<List<ActivitySummaryDto>>> GetActivitySummarities()
+    {
+        
     }
 }

@@ -1,9 +1,8 @@
-﻿namespace Domain.DTOs.Users;
+﻿namespace Domain.DTOs;
 
-public class CreateUserDto
+public class NewRegistrationDto
 {
     public string UserName { get; set; }
     public string Email { get; set; }
-    public string Bio { get; set; }
     public DateTime JoinDate { get; set; }
 }

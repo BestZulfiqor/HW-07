@@ -9,6 +9,8 @@ public class User
     public string UserName { get; set; }
     [MaxLength(100)]
     public string Email { get; set; }
+
+    public DateTime JoinDate { get; set; }
     [MaxLength(200)]
     public string Bio { get; set; }
     

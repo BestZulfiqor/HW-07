@@ -9,7 +9,7 @@ public class Comment
     public int PostId { get; set; }
     [MaxLength(300)] [Required]
     public string Text { get; set; }
-    public DateTime? CreatedAt { get; set; }
+    public DateTime CreatedAt { get; set; }
 
     // navigations
     public User User { get; set; }
