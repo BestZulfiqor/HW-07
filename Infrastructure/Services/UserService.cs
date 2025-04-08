@@ -244,7 +244,7 @@ public class UserService(DataContext context) : IUserService
             }).ToListAsync();
         return new Response<List<UserRecentPostDto>>(posts);
     }
-    
+
     // 8
     public async Task<Response<List<HighCommentPostDto>>> GetHighCommentPosts()
     {
@@ -258,7 +258,7 @@ public class UserService(DataContext context) : IUserService
             }).ToListAsync();
         return new Response<List<HighCommentPostDto>>(posts);
     }
-    
+
     // 9
     public async Task<Response<List<RecentCommentDto>>> GetRecentComments()
     {
@@ -273,7 +273,7 @@ public class UserService(DataContext context) : IUserService
             }).ToListAsync();
         return new Response<List<RecentCommentDto>>(comments);
     }
-    
+
     // 10
     public async Task<Response<List<PostRecentCommentsDto>>> GetPostRecentComments(int id)
     {
@@ -289,7 +289,7 @@ public class UserService(DataContext context) : IUserService
             }).ToListAsync();
         return new Response<List<PostRecentCommentsDto>>(comments);
     }
-    
+
     // 11
     public async Task<Response<List<LongTextCommentDto>>> GetLongTextComments()
     {
@@ -303,7 +303,7 @@ public class UserService(DataContext context) : IUserService
             }).ToListAsync();
         return new Response<List<LongTextCommentDto>>(comments);
     }
-    
+
     // 12
     public async Task<Response<List<QuickResponseCommentDto>>> GetQuickResponseComments()
     {
@@ -316,13 +316,69 @@ public class UserService(DataContext context) : IUserService
                 UserName = n.User.UserName,
                 TimeDifferent = n.CreatedAt - n.Post.CreatedAt
             }).ToListAsync();
-        
+
         return new Response<List<QuickResponseCommentDto>>(comments);
     }
-    
+
     // 13
-    public async Task<Response<List<ActivitySummaryDto>>> GetActivitySummarities()
+    public async Task<Response<List<ActivitySummaryDto>>> GetActivitySummary(int id)
     {
+        var userActivity = await context.Users
+            .Where(n => n.Id == id)
+            .Select(n => new ActivitySummaryDto
+            {
+                UserName = n.UserName,
+                Posts = n.Posts
+                    .OrderByDescending(p => p.CreatedAt)
+                    .Take(3)
+                    .Select(p => new PostActivity
+                    {
+                        Content = p.Content,
+                        CreatedAt = p.CreatedAt
+                    }).ToList(),
+                Comments = n.Comments
+                    .OrderByDescending(c => c.CreatedAt)
+                    .Take(3)
+                    .Select(c => new CommentActivity
+                    {
+                        Text = c.Text,
+                        PostId = c.PostId
+                    }).ToList()
+            }).ToListAsync();
+
+        return new Response<List<ActivitySummaryDto>>(userActivity);
+    }
+    
+    // 14
+    public async Task<Response<List<RecentPopularPostDto>>> GetRecentPopularPosts()
+    {
+        var posts = await context.Posts
+            .Where(n => n.Comments.Count > 5)
+            .OrderByDescending(n => n.CreatedAt)
+            .Take(5)
+            .Select(n => new RecentPopularPostDto
+            {
+                Content = n.Content,
+                CreatedAt = n.CreatedAt,
+                CommentCount = n.Comments.Count,
+                UserName = n.User.UserName,
+            }).ToListAsync();
         
+        return new Response<List<RecentPopularPostDto>>(posts);
+    }
+    
+    // 15
+    public async Task<Response<List<TopCommenterDto>>> GetTopCommenters()
+    {
+        var users = await context.Users
+            .OrderByDescending(n => n.Comments.Count)
+            .Take(5)
+            .Select(n => new TopCommenterDto()
+            {
+                CommentCount = n.Comments.Count,
+                UserName = n.UserName
+            }).ToListAsync();
+        
+        return new Response<List<TopCommenterDto>>(users);
     }
 }

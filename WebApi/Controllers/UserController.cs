@@ -51,4 +51,20 @@ public class UserController(IUserService service)
         var user = await service.GetUserPostsAsync(id);
         return user;
     }
+
+    [HttpGet("new-registrations")]
+    [HttpGet("active-posters")]
+    [HttpGet("recently-active")]
+    [HttpGet("top-creators")]
+    [HttpGet("high-interaction")]
+    [HttpGet("latest-posts")]
+    [HttpGet("user-recent")]
+    [HttpGet("recent")]
+    [HttpGet("high-comment")]
+    [HttpGet("{by-post-id:int}")]
+    [HttpGet("long-text")]
+    [HttpGet("quick-responses")]
+    [HttpGet("{activity-summary:int}")]
+    [HttpGet("recent-popular")]
+    [HttpGet("top-commenters")]
 }
